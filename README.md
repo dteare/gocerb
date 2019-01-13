@@ -15,6 +15,8 @@ Ensure you [enable the API plugin](https://cerb.ai/guides/api/configure-plugin/)
 
 Copy `sample-creds.json` to `~/.config/cerb/creds.json` and update it with your API key-pair that you created.
 
+Edit `restAPIBaseURL` in `cerb.go` with your server information.
+
 ## Testing
 
 Run `go run main.go` and you should see:
