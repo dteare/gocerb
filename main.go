@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.1password.io/sorting-hat/src/cerb"
+	"github.com/dteare/gocerb/cerb"
 )
 
 var cerbCredsFilepath string
@@ -29,19 +29,54 @@ func main() {
 		return
 	}
 
-	cerb := cerb.NewCerberus(*creds, *client)
+	c := cerb.NewCerberus(*creds, *client)
+	testCreateTicket(c)
+	testFindTicketsByEmail(c)
+	testListOpenTickets(c)
+}
+
+func testCreateTicket(c cerb.Cerberus) {
+	q := cerb.CustomerQuestion{
+		BucketID: 1049,
+		GroupID:  900,
+		Content:  "Hello there! ❤️",
+		From:     "dave+gocerb@1password.com",
+		Notes:    "Some exciting notes that stand out in a stunning yellow. 🎨",
+		Subject:  "GoCerb! 🤘🏼",
+		To:       "support@1password.com",
+	}
+
+	message, err := c.CreateMessage(q)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Created message! 💌", message.TicketURL)
+}
+
+func testFindTicketsByEmail(c cerb.Cerberus) {
+	email := "dave+gocerb@1password.com"
+	tickets, err := c.FindTicketsByEmail(email)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Found %d open tickets for %s.\n", len(*tickets), email)
+}
+
+func testListOpenTickets(c cerb.Cerberus) {
 	page := 0
 
 	for {
-		tickets, hasMore, err := cerb.ListOpenTickets(page)
+		tickets, hasMore, err := c.ListOpenTickets(page)
 		if err != nil {
 			fmt.Printf("Error finding open cerb tickets: %v\n", err)
 			os.Exit(1)
 		}
 
-		for _, t := range *tickets {
-			researchTicket(t)
-		}
+		fmt.Printf("Page %d has %d tickets. Has more? %t\n", page, len(*tickets), hasMore)
+		// for _, t := range *tickets {
+		// 	fmt.Println("\t", t.Email)
+		// }
 
 		// Only load first page until things are working
 		if !hasMore || 1 == 1 {
@@ -49,10 +84,6 @@ func main() {
 		}
 		page++
 	}
-}
-
-func researchTicket(t cerb.CerberusTicket) {
-	// TODO: fun things like look up the customer in a CRM, etc.
 }
 
 func loadCerbCreds() (*cerb.CerberusCreds, error) {

@@ -7,15 +7,12 @@ package cerb
 // Long story short, this implementation is a complete hack job and brittle af. Be careful and test frequently!
 
 import (
-	"bytes"
-	_md5 "crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"reflect"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +21,7 @@ import (
 // CerberusTicket models the ticket object used by Cerb
 type CerberusTicket struct {
 	BucketID    int    `json:"bucket_id"`
+	Email       string `json:"initial_message_sender_email"` // Only set when `initial_message_sender_` is expanded
 	ID          int    `json:"id"`
 	Mask        string `json:"mask"`
 	NumMessages string `json:"num_messages"`
@@ -32,14 +30,14 @@ type CerberusTicket struct {
 	URL         string `json:"url"`
 }
 
-// CerberusTicketSearchResults is the raw structure returned by the Cerberus search API when looking for tickets. Note that the format can change based on the search critera so some fields must be an interface{} and be carefully cast. 😕
+// CerberusTicketSearchResults is the raw structure returned by the Cerberus search API when looking for tickets.
 type CerberusTicketSearchResults struct {
 	Status  string           `json:"__status"`
 	Count   int              `json:"count"`
 	Limit   int              `json:"limit"`
 	Page    int              `json:"page"`
 	Results []CerberusTicket `json:"results"`
-	Total   interface{}      `json:"total"` // Want int but Cerb will randomly return a string
+	Total   int              `json:"total"`
 	Version string           `json:"__version"`
 }
 
@@ -60,6 +58,7 @@ type CerberusCreds struct {
 }
 
 var baseURL = "https://agilebits.cerb.me"
+var restAPIBaseURL = "https://agilebits.cerb.me/rest/"
 
 // Cerberus handles all the interaction with the Cerb API.
 type Cerberus struct {
@@ -76,30 +75,99 @@ func NewCerberus(creds CerberusCreds, client http.Client) Cerberus {
 	return c
 }
 
+// CustomerQuestion represents a question asked by a user. Additional fields allow you to control where to create the ticket, notes to add, initial state, etc.
+type CustomerQuestion struct {
+	BucketID int
+	GroupID  int
+
+	To      string
+	From    string
+	Subject string
+	Content string
+
+	Notes string
+}
+
+// CreateTicketResponse represents the response from the records/ticket/create.json endpoint
+type CreateTicketResponse struct {
+	ID           int
+	CreatedAt    int    `json:"created"`
+	Importance   int    `json:"importance"`
+	Mask         string `json:"mask"`
+	MessageCount string `json:"num_messages"`
+	Status       string `json:"status"`
+	Subject      string `json:"subject"`
+	URL          string `json:"url"`
+}
+
+// CreateMessageResponse represents the response from the records/message/create.json endpoint
+type CreateMessageResponse struct {
+	ID       int `json:"id"`
+	SenderID int `json:"sender_id"`
+
+	InitialMessageSenderAvatar    string `json:"ticket_initial_message_sender__image_url"`
+	InitialMessageSenderEmail     string `json:"ticket_initial_message_sender_email"`
+	InitalMessageSenderID         int    `json:"ticket_initial_message_sender_id"`
+	InitialMessageURL             string `json:"ticket_initial_message_record_url"`
+	InitialMessageSenderRecordURL string `json:"ticket_initial_message_sender_record_url"`
+
+	TicketID      int    `json:"ticket_initial_message_ticket_id"`
+	TicketLabel   string `json:"ticket__label"`
+	TicketMask    string `json:"ticket_mask"`
+	TicketStatus  string `json:"ticket_status"`
+	TicketSubject string `json:"ticket_subject"`
+	TicketURL     string `json:"ticket_url"`
+}
+
+// CreateMessage uses the Cerb api to create a new ticket
+func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, error) {
+	// Create a ticket (a "thread" that will contain the messages for this conversation)
+	form := url.Values{}
+	form.Set("fields[group_id]", strconv.Itoa(q.GroupID))
+	form.Set("fields[bucket_id]", strconv.Itoa(q.BucketID))
+	form.Set("fields[subject]", q.Subject)
+	form.Set("fields[participants]", "customer@example.com")
+
+	var ticket CreateTicketResponse
+	err := c.performRequest(http.MethodPost, "records/ticket/create.json", nil, form, &ticket)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create Cerberus ticket: %v", err)
+	}
+
+	// Create a message on the newly created ticket
+	headers := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s", q.From, q.To, q.Subject)
+	form = url.Values{}
+	form.Set("expand", "ticket_initial_message_sender_")
+	form.Set("fields[ticket_id]", strconv.Itoa(ticket.ID))
+	form.Set("fields[sender]", q.From)
+	form.Set("fields[headers]", headers)
+	form.Set("fields[content]", q.Content)
+
+	var message CreateMessageResponse
+	err = c.performRequest(http.MethodPost, "records/message/create.json", nil, form, &message)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create Cerberus ticket: %v", err)
+	}
+
+	fmt.Printf("Create message %d within ticket %d.\n", message.ID, ticket.ID)
+	return &message, nil
+}
+
 // FindTicketsByEmail finds all open tickets for the given email address.
 func (c Cerberus) FindTicketsByEmail(email string) (*[]CerberusTicket, error) {
-	method := "GET"
-	payload := ""
-	path := "/rest/records/ticket/search.json"
-	query := cerbEncode("q=status:[o] messages.first:(sender:(email:'" + email + "'))")
+	params := url.Values{}
+	params.Set("q", "status:[o] messages.first:(sender:(email:'"+email+"'))")
 
-	headers := reqHeaders(c.creds, method, path, query, payload)
-
-	resp, err := c.performCerbRequest(http.MethodGet, baseURL+path+"?"+query, nil, headers)
+	var r CerberusTicketSearchResults
+	err := c.performRequest(http.MethodGet, "records/ticket/search.json", params, nil, &r)
 
 	if err != nil {
-		fmt.Printf("Failed to perform Cerb request: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to search tickets: %v", err)
 	}
 
-	var cerbResp CerberusTicketSearchResults
-	err = json.Unmarshal(resp, &cerbResp)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to unmarshall cerb search results: %v", err)
-	}
-
-	return &cerbResp.Results, nil
+	return &r.Results, nil
 }
 
 // ListOpenTickets finds all open tickets in Cerberus. The Cerb api returns things grouped by pages so the caller needs to specify which page they want. The returned bool indicates if there are more pages remaining to load.
@@ -108,7 +176,7 @@ func (c Cerberus) ListOpenTickets(page int) (*[]CerberusTicket, bool, error) {
 	method := "GET"
 	payload := ""
 	path := "/rest/records/ticket/search.json"
-	query := cerbEncode(fmt.Sprintf("q=status:[o] group:(Billing OR Sales) page:%d limit:%d", page, limit))
+	query := cerbEncode(fmt.Sprintf("expand=initial_message_sender_&q=status:[o] page:%d limit:%d", page, limit))
 
 	headers := reqHeaders(c.creds, method, path, query, payload)
 
@@ -119,28 +187,12 @@ func (c Cerberus) ListOpenTickets(page int) (*[]CerberusTicket, bool, error) {
 		return nil, false, err
 	}
 
-	fmt.Println("Body:\n", string(resp))
-
 	var results CerberusTicketSearchResults
 	err = json.Unmarshal(resp, &results)
 
-	total, ok := results.Total.(int)
-	if !ok {
-		tstr, ok := results.Total.(string)
-		if ok {
-			total, err = strconv.Atoi(tstr)
-
-			if err != nil {
-				panic("Failed to parse the results total as a string:" + tstr)
-			}
-		} else {
-			panic(reflect.TypeOf(results.Total))
-		}
-	}
-
-	remaining := total - ((page + 1) * limit) // Page and Limit in the response are incorrect
+	remaining := results.Total - ((page + 1) * limit) // Page and Limit in the response are incorrect
 	// fmt.Printf("Total of %d tickets w/ %d limit\n", total, limit)
-	fmt.Printf("Loaded %d tickets from page %d. %d tickets remain on subseqent pages.\n", results.Count, page, remaining)
+	fmt.Printf("Loaded %d tickets from page %d. %d tickets remain on subsequent pages.\n", results.Count, page, remaining)
 
 	if err != nil {
 		return nil, false, fmt.Errorf("Failed to unmarshall cerb search results: %v", err)
@@ -218,17 +270,6 @@ func cerbEncode(s string) string {
 	return s
 }
 
-func md5(s string) string {
-	h := _md5.New()
-	io.WriteString(h, s)
-	bytes := h.Sum(nil)
-
-	dst := make([]byte, hex.EncodedLen(len(bytes)))
-	hex.Encode(dst, bytes)
-
-	return string(dst)
-}
-
 func (c Cerberus) performCerbRequest(method string, urlString string, body io.Reader, headers http.Header) ([]byte, error) {
 	req, err := http.NewRequest(method, urlString, body)
 
@@ -264,29 +305,4 @@ func (c Cerberus) performCerbRequest(method string, urlString string, body io.Re
 	}
 
 	return b, nil
-}
-
-// CerberusErrorResponse is the structure returned by Cerb when there is a server error. A status code of 200 is used by the response so we need to parse this out and handle it ourselves.
-// i.e. response:
-//		StatusCode 200
-//		Body {"__status":"error","message":"Access denied! (Invalid credentials: access key)"}
-type CerberusErrorResponse struct {
-	Status  string `json:"__status"`
-	Message string `json:"message"`
-}
-
-func extractErrorFromJSONBody(b []byte) error {
-	if bytes.Contains(b, []byte(`"__status":"success"`)) {
-		return nil
-	}
-
-	var resp CerberusErrorResponse
-	err := json.Unmarshal(b, &resp)
-
-	if err != nil {
-		fmt.Printf("Unable to parse response body to extract the error:\n\t%v\n%s", err, string(b))
-		return err
-	}
-
-	return fmt.Errorf("Response body contained non-success status of %s: %v", resp.Status, resp.Message)
 }
