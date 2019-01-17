@@ -14,9 +14,9 @@ Ensure you [enable the API plugin](https://cerb.ai/guides/api/configure-plugin/)
 
 Copy `sample-creds.json` to `~/.config/cerb/creds.json` and update it with your API key-pair that you created.
 
-Update `cerb.NewCerberus` with your base server URL in `main.go`.
-
 ## Testing
+
+Update `cerb.NewCerberus` with your base server URL in `main.go`. You'll also need to set your Bucket and Group ids in `testCreateTicket`.
 
 Run `go run main.go` and you should see:
 
@@ -31,6 +31,9 @@ Loaded 100 tickets from page 23. 11 tickets remain on subsequent pages.
 Loaded 100 tickets from page 24. 0 tickets remain on subsequent pages.
 ```
 
+## Contributing
+
+GoCerb! was primarily created to help our customer support team at [1Password](https://1password.com). I'll happily review pull requests and merge those that help us help more customers. My email notifications are out of control so [ping me on Twitter](https://twitter.com/dteare) to get my attention. 
 
 ## Contributors
 
