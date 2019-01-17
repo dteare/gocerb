@@ -45,6 +45,10 @@ func (c Cerberus) performRequest(method string, endpoint string, params url.Valu
 		return fmt.Errorf("Error performing %s request on %s: %v", method, endpoint, err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Error status code of %d returned when performing %s request on %s", resp.StatusCode, method, endpoint)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("Failed to read response body: %v", err)
@@ -53,8 +57,13 @@ func (c Cerberus) performRequest(method string, endpoint string, params url.Valu
 
 	// fmt.Printf("Response JSON from %s:\n%s\n", endpoint, string(body))
 
-	err = json.Unmarshal(body, target)
+	// 💥 Some end points will return status 200 and set the body to {"__status":"error"} along with an explaination in the message key. Instead of having callers worry about this we do our best to fix that here.
+	err = extractErrorFromJSONBody(body)
+	if err != nil {
+		return err
+	}
 
+	err = json.Unmarshal(body, target)
 	if err != nil {
 		return fmt.Errorf("Error decoding response body: %v", err)
 	}
@@ -112,8 +121,7 @@ func extractErrorFromJSONBody(b []byte) error {
 	err := json.Unmarshal(b, &resp)
 
 	if err != nil {
-		fmt.Printf("Unable to parse response body to extract the error:\n\t%v\n%s", err, string(b))
-		return err
+		return fmt.Errorf("Unable to parse response body to extract the error: %v", err)
 	}
 
 	return fmt.Errorf("Response body contained non-success status of %s: %v", resp.Status, resp.Message)
