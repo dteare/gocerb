@@ -1,7 +1,6 @@
-
 # Go Cerb!
 
-Implements Webgroup Media's [Cerb Helpdesk API](https://cerb.ai/docs/api/).
+Implements Webgroup Media's [Cerb Helpdesk API](https://cerb.ai/docs/api/) in Golang.
 
 ## Setup 
 
@@ -15,7 +14,7 @@ Ensure you [enable the API plugin](https://cerb.ai/guides/api/configure-plugin/)
 
 Copy `sample-creds.json` to `~/.config/cerb/creds.json` and update it with your API key-pair that you created.
 
-Edit `restAPIBaseURL` in `cerb.go` with your server information.
+Update `cerb.NewCerberus` with your base server URL in `main.go`.
 
 ## Testing
 
@@ -23,15 +22,14 @@ Run `go run main.go` and you should see:
 
 ```
 $ go run main.go
-Create message 3968929 within ticket 1264037.
-Created message! 💌 https://agilebits.cerb.me/profiles/ticket/JQW-58124-144
-req.URL= https://agilebits.cerb.me/rest/records/ticket/search.json?q=status%3A%5Bo%5D+messages.first%3A%28sender%3A%28email%3A%27dave%2Bgocerb%401password.com%27%29%29
-Found 0 open tickets for dave+gocerb@1password.com.
-Loaded 100 tickets from page 0. 3120 tickets remain on subsequent pages.
-Page 0 has 100 tickets. Has more? true
+Create message 3983875 within ticket 3983875! 💌 https://agilebits.cerb.me/profiles/ticket/IHQ-29388-848
+Found 7 open tickets for dave+gocerb@1password.com.
+Loaded 100 tickets from page 0. 2312 tickets remain on subsequent pages.
+Loaded 100 tickets from page 1. 2212 tickets remain on subsequent pages.
+...
+Loaded 100 tickets from page 23. 11 tickets remain on subsequent pages.
+Loaded 100 tickets from page 24. 0 tickets remain on subsequent pages.
 ```
-
-Note the sample app looks for open tickets in the Billing and Sales groups only.
 
 
 ## Contributors
