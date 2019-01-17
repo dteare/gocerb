@@ -29,7 +29,7 @@ func main() {
 		return
 	}
 
-	c := cerb.NewCerberus(*creds, *client)
+	c := cerb.NewCerberus(*creds, *client, "https://agilebits.cerb.me/rest/")
 	testCreateTicket(c)
 	testFindTicketsByEmail(c)
 	testListOpenTickets(c)

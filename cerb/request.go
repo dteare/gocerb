@@ -14,11 +14,15 @@ import (
 	"time"
 )
 
+// The Cerb api requires all paramters and payloads to be hashed on the client side and this hash needs to match the hash performed by the server **exactly**. All parameters must be sorted and encoded.
+//
+// @see https://cerb.ai/docs/api/authentication/ for details.
+
 func (c Cerberus) performRequest(method string, endpoint string, params url.Values, form url.Values, target interface{}) error {
 	location, _ := time.LoadLocation("GMT")
 	t := time.Now().In(location)
 	date := t.Format(time.RFC1123)
-	req, err := http.NewRequest(method, restAPIBaseURL+endpoint, strings.NewReader(form.Encode()))
+	req, err := http.NewRequest(method, c.restAPIBaseURL+endpoint, strings.NewReader(form.Encode()))
 
 	if len(params) > 0 {
 		q := req.URL.Query()
