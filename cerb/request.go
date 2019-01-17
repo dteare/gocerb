@@ -27,8 +27,6 @@ func (c Cerberus) performRequest(method string, endpoint string, params url.Valu
 			q.Add(key, value[0])
 		}
 		req.URL.RawQuery = q.Encode()
-
-		fmt.Println("req.URL=", req.URL)
 	}
 
 	if err != nil {

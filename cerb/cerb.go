@@ -75,7 +75,7 @@ func NewCerberus(creds CerberusCreds, client http.Client) Cerberus {
 	return c
 }
 
-// CustomerQuestion represents a question asked by a user. Additional fields allow you to control where to create the ticket, notes to add, initial state, etc.
+// CustomerQuestion represents a question asked by a user that needs to be created as a Ticket in Cerb. Additional fields allow you to control where to create the ticket, notes to add, initial state, etc.
 type CustomerQuestion struct {
 	BucketID int
 	GroupID  int
@@ -151,7 +151,6 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 		return nil, fmt.Errorf("Failed to create Cerberus ticket: %v", err)
 	}
 
-	fmt.Printf("Create message %d within ticket %d.\n", message.ID, ticket.ID)
 	return &message, nil
 }
 
@@ -170,35 +169,32 @@ func (c Cerberus) FindTicketsByEmail(email string) (*[]CerberusTicket, error) {
 	return &r.Results, nil
 }
 
-// ListOpenTickets finds all open tickets in Cerberus. The Cerb api returns things grouped by pages so the caller needs to specify which page they want. The returned bool indicates if there are more pages remaining to load.
-func (c Cerberus) ListOpenTickets(page int) (*[]CerberusTicket, bool, error) {
-	limit := 100
-	method := "GET"
-	payload := ""
-	path := "/rest/records/ticket/search.json"
-	query := cerbEncode(fmt.Sprintf("expand=initial_message_sender_&q=status:[o] page:%d limit:%d", page, limit))
+// ListOpenTickets finds all open tickets in Cerberus. The Cerb api returns things grouped by pages so the caller needs to specify which page they want. Returns the first page of matching tickets and the number of additional tickets remaining on subsequent pages.
+func (c Cerberus) ListOpenTickets(page int) (*[]CerberusTicket, int, error) {
+	limit := 100 // Maximum of 250 enforced by server
+	params := url.Values{}
+	params.Set("q", "status:[o]")
+	params.Set("page", strconv.Itoa(page))
+	params.Set("limit", strconv.Itoa(limit))
+	params.Set("expand", "initial_message_sender_")
 
-	headers := reqHeaders(c.creds, method, path, query, payload)
-
-	resp, err := c.performCerbRequest(http.MethodGet, baseURL+path+"?"+query, nil, headers)
-
-	if err != nil {
-		fmt.Printf("Failed to perform Cerb request: %v", err)
-		return nil, false, err
-	}
-
-	var results CerberusTicketSearchResults
-	err = json.Unmarshal(resp, &results)
-
-	remaining := results.Total - ((page + 1) * limit) // Page and Limit in the response are incorrect
-	// fmt.Printf("Total of %d tickets w/ %d limit\n", total, limit)
-	fmt.Printf("Loaded %d tickets from page %d. %d tickets remain on subsequent pages.\n", results.Count, page, remaining)
+	var r CerberusTicketSearchResults
+	err := c.performRequest(http.MethodGet, "records/ticket/search.json", params, nil, &r)
 
 	if err != nil {
-		return nil, false, fmt.Errorf("Failed to unmarshall cerb search results: %v", err)
+		return nil, 0, fmt.Errorf("ListOpenTickets failed to search tickets: %v", err)
 	}
 
-	return &results.Results, remaining > 0, nil
+	remaining := r.Total - ((page + 1) * limit) // Page and Limit in response are incorrect
+
+	if err != nil {
+		return nil, 0, fmt.Errorf("Failed to unmarshall cerb search results: %v", err)
+	}
+
+	if remaining < 0 {
+		remaining = 0
+	}
+	return &r.Results, remaining, nil
 }
 
 // CreateTicket creates a ticket in Cerberus

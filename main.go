@@ -46,12 +46,12 @@ func testCreateTicket(c cerb.Cerberus) {
 		To:       "support@1password.com",
 	}
 
-	message, err := c.CreateMessage(q)
+	m, err := c.CreateMessage(q)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Created message! 💌", message.TicketURL)
+	fmt.Printf("Create message %d within ticket %d! 💌 %s\n", m.ID, m.ID, m.TicketURL)
 }
 
 func testFindTicketsByEmail(c cerb.Cerberus) {
@@ -67,19 +67,20 @@ func testListOpenTickets(c cerb.Cerberus) {
 	page := 0
 
 	for {
-		tickets, hasMore, err := c.ListOpenTickets(page)
+		tickets, remaining, err := c.ListOpenTickets(page)
 		if err != nil {
 			fmt.Printf("Error finding open cerb tickets: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Page %d has %d tickets. Has more? %t\n", page, len(*tickets), hasMore)
+		fmt.Printf("Loaded %d tickets from page %d. %d tickets remain on subsequent pages.\n", len(*tickets), page, remaining)
+
 		// for _, t := range *tickets {
 		// 	fmt.Println("\t", t.Email)
 		// }
 
 		// Only load first page until things are working
-		if !hasMore || 1 == 1 {
+		if remaining == 0 {
 			break
 		}
 		page++
