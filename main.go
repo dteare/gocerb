@@ -48,7 +48,8 @@ func testCreateTicket(c cerb.Cerberus) {
 
 	m, err := c.CreateMessage(q)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Failed to create message: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("Create message %d within ticket %d! 💌 %s\n", m.ID, m.ID, m.TicketURL)
@@ -58,7 +59,8 @@ func testFindTicketsByEmail(c cerb.Cerberus) {
 	email := "dave+gocerb@1password.com"
 	tickets, err := c.FindTicketsByEmail(email)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Failed to find tickets by email: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("Found %d open tickets for %s.\n", len(*tickets), email)
 }
