@@ -7,29 +7,6 @@ import (
 	"strconv"
 )
 
-// CerberusTicket models the ticket object used by Cerb
-type CerberusTicket struct {
-	BucketID    int    `json:"bucket_id"`
-	Email       string `json:"initial_message_sender_email"` // Only set when `initial_message_sender_` is expanded
-	ID          int    `json:"id"`
-	Mask        string `json:"mask"`
-	NumMessages string `json:"num_messages"`
-	Subject     string `json:"subject"`
-	Status      string `json:"status"`
-	URL         string `json:"url"`
-}
-
-// CerberusTicketSearchResults is the raw structure returned by the Cerberus search API when looking for tickets. Most often you want to call a function that hides all these details and work with a []CerberusTicket instead.
-type CerberusTicketSearchResults struct {
-	Status  string           `json:"__status"`
-	Count   int              `json:"count"`
-	Limit   int              `json:"limit"`
-	Page    int              `json:"page"`
-	Results []CerberusTicket `json:"results"`
-	Total   int              `json:"total"`
-	Version string           `json:"__version"`
-}
-
 // CerberusCreds contains the keys needed to connect to the Cerberus API. @see https://cerb.ai/docs/api/authentication/
 type CerberusCreds struct {
 	Key    string `json:"access-key"`
@@ -51,6 +28,29 @@ func NewCerberus(creds CerberusCreds, client http.Client, baseURL string) Cerber
 		restAPIBaseURL: baseURL,
 	}
 	return c
+}
+
+// CerberusTicket models the ticket object used by Cerb
+type CerberusTicket struct {
+	BucketID    int    `json:"bucket_id"`
+	Email       string `json:"initial_message_sender_email"` // Only set when `initial_message_sender_` is expanded
+	ID          int    `json:"id"`
+	Mask        string `json:"mask"`
+	NumMessages string `json:"num_messages"`
+	Subject     string `json:"subject"`
+	Status      string `json:"status"`
+	URL         string `json:"url"`
+}
+
+// CerberusTicketSearchResults is the raw structure returned by the Cerberus search API when looking for tickets. Most often you want to call a function that hides all these details and work with a []CerberusTicket instead.
+type CerberusTicketSearchResults struct {
+	Status  string           `json:"__status"`
+	Count   int              `json:"count"`
+	Limit   int              `json:"limit"`
+	Page    int              `json:"page"`
+	Results []CerberusTicket `json:"results"`
+	Total   int              `json:"total"`
+	Version string           `json:"__version"`
 }
 
 // CustomerQuestion represents a question asked by a user that needs to be created as a Ticket in Cerb. Additional fields allow you to control where to create the ticket, notes to add, initial state, etc.
