@@ -158,7 +158,7 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 // FindTicketsByEmail finds all open tickets for the given email address.
 func (c Cerberus) FindTicketsByEmail(email string) (*[]CerberusTicket, error) {
 	params := url.Values{}
-	params.Set("q", "status:[o] messages.first:(sender:(email:'"+email+"'))")
+	params.Set("q", "status:[o] messages.first:(sender:(email:"+email+"))")
 
 	var r CerberusTicketSearchResults
 	err := c.performRequest(http.MethodGet, "records/ticket/search.json", params, nil, &r)
