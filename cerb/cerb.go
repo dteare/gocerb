@@ -34,6 +34,7 @@ func NewCerberus(creds CerberusCreds, client http.Client, baseURL string) Cerber
 type CerberusTicket struct {
 	BucketID    int    `json:"bucket_id"`
 	Email       string `json:"initial_message_sender_email"` // Only set when `initial_message_sender_` is expanded
+	GroupID     int    `json:"group_id"`
 	ID          int    `json:"id"`
 	Mask        string `json:"mask"`
 	NumMessages string `json:"num_messages"`
