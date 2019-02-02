@@ -30,10 +30,10 @@ func main() {
 	}
 
 	c := cerb.NewCerberus(*creds, *client, "https://agilebits.cerb.me/rest/")
-	// testCreateTicket(c)
+	testCreateTicket(c)
 	// testFindTicketsByEmail(c)
 	// testListOpenTickets(c)
-	testListGroups(c)
+	// testListGroups(c)
 }
 
 func testCreateTicket(c cerb.Cerberus) {
@@ -45,6 +45,12 @@ func testCreateTicket(c cerb.Cerberus) {
 		Notes:    "Some exciting notes that stand out in a stunning yellow. 🎨",
 		Subject:  "GoCerb! 🤘🏼",
 		To:       "support@1password.com",
+		CustomFields: []cerb.CustomField{
+			cerb.CustomField{
+				ID:    37, // Found using Search > Custom Fields in your Cerb workspace
+				Value: "1",
+			},
+		},
 	}
 
 	m, err := c.CreateMessage(q)
@@ -54,6 +60,19 @@ func testCreateTicket(c cerb.Cerberus) {
 	}
 
 	fmt.Printf("Create message %d within ticket %d! 💌 %s\n", m.ID, m.ID, m.TicketURL)
+
+	customFields := []cerb.CustomField{
+		cerb.CustomField{
+			ID:    37,
+			Value: "1",
+		},
+	}
+
+	err = c.SetCustomTicketFields(m.TicketID, customFields)
+	if err != nil {
+		fmt.Printf("Failed to set custom fields: %v", err)
+		os.Exit(1)
+	}
 }
 
 func testFindTicketsByEmail(c cerb.Cerberus) {
@@ -96,7 +115,13 @@ func testListGroups(c cerb.Cerberus) {
 		panic(err)
 	}
 
-	fmt.Printf("Found %d groups", len(*groups))
+	fmt.Printf("Found %d groups:\n", len(*groups))
+	for _, group := range *groups {
+		fmt.Printf("%s (%d)\n", group.Name, group.ID)
+		for _, bucket := range group.Buckets {
+			fmt.Printf("\t%s (%d)\n", bucket.Name, bucket.ID)
+		}
+	}
 }
 
 func loadCerbCreds() (*cerb.CerberusCreds, error) {

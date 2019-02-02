@@ -76,7 +76,26 @@ type CustomerQuestion struct {
 	Subject string
 	Content string
 
-	Notes string
+	CustomFields []CustomField
+	Notes        string
+}
+
+// CustomField allows records in Cerb can be extended with custom fields. @see https://cerb.ai/docs/api/topics/custom-fields/
+type CustomField struct {
+	ID    int
+	Value string
+}
+
+// SetCustomTicketFieldsResponse is the response from the PUT records/tickets/123.json endpoint
+type SetCustomTicketFieldsResponse struct {
+	ID           int
+	CreatedAt    int    `json:"created"`
+	Importance   int    `json:"importance"`
+	Mask         string `json:"mask"`
+	MessageCount string `json:"num_messages"`
+	Status       string `json:"status"`
+	Subject      string `json:"subject"`
+	URL          string `json:"url"`
 }
 
 // CreateMessageResponse represents the response from the records/message/create.json endpoint
@@ -127,10 +146,30 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 	err = c.performRequest(http.MethodPost, "records/message/create.json", nil, form, &message)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create Cerberus ticket: %v", err)
+		return nil, fmt.Errorf("Failed to create Cerberus message on ticket %d: %v", ticket.ID, err)
 	}
 
+	c.SetCustomTicketFields(ticket.ID, q.CustomFields)
+
 	return &message, nil
+}
+
+// SetCustomTicketFields updates the custom fields for the given ticket.
+func (c Cerberus) SetCustomTicketFields(ticketID int, customFields []CustomField) error {
+	for _, cf := range customFields {
+		var update SetCustomTicketFieldsResponse
+
+		form := url.Values{}
+		form.Set("fields[custom_"+strconv.Itoa(cf.ID)+"]", cf.Value)
+
+		err := c.performRequest(http.MethodPut, "records/tickets/"+strconv.Itoa(ticketID)+".json?expand=custom_", nil, form, &update)
+
+		if err != nil {
+			return fmt.Errorf("Error setting custom ticket field %d to %v: %v", cf.ID, cf.Value, err)
+		}
+	}
+
+	return nil
 }
 
 // FindTicketsByEmail finds all open tickets for the given email address.

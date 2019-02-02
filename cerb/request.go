@@ -59,7 +59,7 @@ func (c Cerberus) performRequest(method string, endpoint string, params url.Valu
 	}
 	resp.Body.Close()
 
-	// fmt.Printf("Response JSON from %s:\n%s\n\n", endpoint, string(body))
+	//	fmt.Printf("Response JSON from %s:\n%s\n\n", endpoint, string(body))
 
 	// 💥 Some end points will return status 200 and set the body to {"__status":"error"} along with an explaination in the message key. Instead of having callers worry about this we do our best to fix that here.
 	err = extractErrorFromJSONBody(body)
