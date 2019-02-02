@@ -54,6 +54,18 @@ type CerberusTicketSearchResults struct {
 	Version string           `json:"__version"`
 }
 
+// CreateTicketResponse represents the response from the records/ticket/create.json endpoint
+type CreateTicketResponse struct {
+	ID           int
+	CreatedAt    int    `json:"created"`
+	Importance   int    `json:"importance"`
+	Mask         string `json:"mask"`
+	MessageCount string `json:"num_messages"`
+	Status       string `json:"status"`
+	Subject      string `json:"subject"`
+	URL          string `json:"url"`
+}
+
 // CustomerQuestion represents a question asked by a user that needs to be created as a Ticket in Cerb. Additional fields allow you to control where to create the ticket, notes to add, initial state, etc.
 type CustomerQuestion struct {
 	BucketID int
@@ -65,18 +77,6 @@ type CustomerQuestion struct {
 	Content string
 
 	Notes string
-}
-
-// CreateTicketResponse represents the response from the records/ticket/create.json endpoint
-type CreateTicketResponse struct {
-	ID           int
-	CreatedAt    int    `json:"created"`
-	Importance   int    `json:"importance"`
-	Mask         string `json:"mask"`
-	MessageCount string `json:"num_messages"`
-	Status       string `json:"status"`
-	Subject      string `json:"subject"`
-	URL          string `json:"url"`
 }
 
 // CreateMessageResponse represents the response from the records/message/create.json endpoint
@@ -174,4 +174,113 @@ func (c Cerberus) ListOpenTickets(page int) (*[]CerberusTicket, int, error) {
 		remaining = 0
 	}
 	return &r.Results, remaining, nil
+}
+
+// SearchGroupResponse is the response from the records/group/search.json endpoint
+type SearchGroupResponse struct {
+	Status  string  `json:"__status"`
+	Count   int     `json:"count"`
+	Limit   int     `json:"limit"`
+	Page    int     `json:"page"`
+	Results []Group `json:"results"`
+	Total   int     `json:"total"`
+	Version string  `json:"__version"`
+}
+
+// SearchBucketsResponse is the response from the records/bucket/search.json endpoint
+type SearchBucketsResponse struct {
+	Status  string   `json:"__status"`
+	Count   int      `json:"count"`
+	Limit   int      `json:"limit"`
+	Page    int      `json:"page"`
+	Results []Bucket `json:"results"`
+	Total   int      `json:"total"`
+	Version string   `json:"__version"`
+}
+
+// Group represents a group within Cerb records/bucket/search.json endpoint
+type Group struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	URL  string `json:"record_url"`
+
+	Updated int `json:"updated"`
+	Created int `json:"created"`
+
+	Buckets []Bucket
+}
+
+// SearchBucketsResponse is the result from the
+
+// Bucket represents a bucket within Cerb
+type Bucket struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	URL  string `json:"record_url"`
+
+	Updated int `json:"updated_at"`
+	Default int `json:"is_default"`
+}
+
+// ListGroups searches for all groups
+func (c Cerberus) ListGroups() (*[]Group, error) {
+	limit := 250 // If you need pagination imitate ListOpenTickets
+	params := url.Values{}
+	params.Set("q", "")
+	params.Set("limit", strconv.Itoa(limit))
+
+	var r SearchGroupResponse
+	err := c.performRequest(http.MethodGet, "records/group/search.json", params, nil, &r)
+
+	if err != nil {
+		return nil, fmt.Errorf("ListGroups failed to search groups: %v", err)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshall ListGroups search results: %v", err)
+	}
+
+	return &r.Results, nil
+}
+
+// FindBuckets will search Cerb for buckets within the given group
+func (c Cerberus) FindBuckets(groupID int) (*[]Bucket, error) {
+	limit := 250 // If you need pagination imitate ListOpenTickets
+	params := url.Values{}
+	params.Set("q", "group.id:["+strconv.Itoa(groupID)+"]")
+	params.Set("limit", strconv.Itoa(limit))
+
+	var r SearchBucketsResponse
+	err := c.performRequest(http.MethodGet, "records/bucket/search.json", params, nil, &r)
+
+	if err != nil {
+		return nil, fmt.Errorf("ListGroups failed to search buckets: %v", err)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshall FindBuckets search results: %v", err)
+	}
+
+	return &r.Results, nil
+}
+
+// FindAllGroupsAndBuckets searches Cerb for all Groups and the Buckets within them.
+func (c Cerberus) FindAllGroupsAndBuckets() (*[]Group, error) {
+	groups, err := c.ListGroups()
+
+	if err != nil {
+		return nil, fmt.Errorf("error listing groups: %v", err)
+	}
+
+	for i, group := range *groups {
+		buckets, err := c.FindBuckets(group.ID)
+
+		if err != nil {
+			return nil, fmt.Errorf("AllBucketsByGroup failed to find buckets in group %d: %v", group.ID, err)
+		}
+
+		(*groups)[i].Buckets = *buckets
+	}
+
+	return groups, nil
 }

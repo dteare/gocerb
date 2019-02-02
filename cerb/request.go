@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// The Cerb api requires all paramters and payloads to be hashed on the client side and this hash needs to match the hash performed by the server **exactly**. All parameters must be sorted and encoded.
+// The Cerb api requires all parameters and payloads to be hashed on the client side and this hash needs to match the hash performed by the server **exactly**. All parameters must be sorted and encoded.
 //
 // @see https://cerb.ai/docs/api/authentication/ for details.
 
@@ -59,7 +59,7 @@ func (c Cerberus) performRequest(method string, endpoint string, params url.Valu
 	}
 	resp.Body.Close()
 
-	// fmt.Printf("Response JSON from %s:\n%s\n", endpoint, string(body))
+	// fmt.Printf("Response JSON from %s:\n%s\n\n", endpoint, string(body))
 
 	// 💥 Some end points will return status 200 and set the body to {"__status":"error"} along with an explaination in the message key. Instead of having callers worry about this we do our best to fix that here.
 	err = extractErrorFromJSONBody(body)

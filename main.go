@@ -30,9 +30,10 @@ func main() {
 	}
 
 	c := cerb.NewCerberus(*creds, *client, "https://agilebits.cerb.me/rest/")
-	testCreateTicket(c)
-	testFindTicketsByEmail(c)
-	testListOpenTickets(c)
+	// testCreateTicket(c)
+	// testFindTicketsByEmail(c)
+	// testListOpenTickets(c)
+	testListGroups(c)
 }
 
 func testCreateTicket(c cerb.Cerberus) {
@@ -81,12 +82,21 @@ func testListOpenTickets(c cerb.Cerberus) {
 		// 	fmt.Println("\t", t.Email)
 		// }
 
-		// Only load first page until things are working
 		if remaining == 0 {
 			break
 		}
 		page++
 	}
+}
+
+func testListGroups(c cerb.Cerberus) {
+	groups, err := c.FindAllGroupsAndBuckets()
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Found %d groups", len(*groups))
 }
 
 func loadCerbCreds() (*cerb.CerberusCreds, error) {
