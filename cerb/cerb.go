@@ -90,6 +90,7 @@ type CustomerQuestion struct {
 
 	CustomFields []CustomField
 	Notes        string
+	Status       string // [o]pen, [c]losed, [w]aiting. Defaults to [o]
 }
 
 // CustomField allows records in Cerb can be extended with custom fields. @see https://cerb.ai/docs/api/topics/custom-fields/
@@ -132,9 +133,14 @@ type CreateMessageResponse struct {
 // CreateMessage uses the Cerb api to create a new ticket
 func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, error) {
 	// Create a ticket (a "thread" that will contain the messages for this conversation)
+	status := q.Status
+	if status == "" {
+		status = "o"
+	}
 	form := url.Values{}
 	form.Set("fields[group_id]", strconv.Itoa(q.GroupID))
 	form.Set("fields[bucket_id]", strconv.Itoa(q.BucketID))
+	form.Set("fields[status]", status)
 	form.Set("fields[subject]", q.Subject)
 	form.Set("fields[participants]", "customer@example.com")
 
