@@ -66,7 +66,19 @@ type CreateTicketResponse struct {
 	URL          string `json:"url"`
 }
 
-// CustomerQuestion represents a question asked by a user that needs to be created as a Ticket in Cerb. Additional fields allow you to control where to create the ticket, notes to add, initial state, etc.
+// CreateCommentResponse represents the response from the records/comment/create.json endpoint
+type CreateCommentResponse struct {
+	ID           int
+	CreatedAt    int    `json:"created"`
+	Importance   int    `json:"importance"`
+	Mask         string `json:"mask"`
+	MessageCount string `json:"num_messages"`
+	Status       string `json:"status"`
+	Subject      string `json:"subject"`
+	URL          string `json:"url"`
+}
+
+// CustomerQuestion represents a question asked by a user that needs to be created as a Ticket in Cerb. Additional fields allow you to control where to create the ticket, notes to add, initial status, etc.
 type CustomerQuestion struct {
 	BucketID int
 	GroupID  int
@@ -151,7 +163,35 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 
 	c.SetCustomTicketFields(ticket.ID, q.CustomFields)
 
+	if q.Notes != "" {
+		err = c.CreateComment(ticket.ID, q.Notes)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create comment on ticket %d: %v", ticket.ID, err)
+		}
+	}
+
 	return &message, nil
+}
+
+// CreateComment adds a comment to an existing ticket
+func (c Cerberus) CreateComment(ticketID int, comment string) error {
+	params := url.Values{}
+	params.Set("fields[author__context]", "ticket")
+	params.Set("fields[author_id]", strconv.Itoa(17))
+	params.Set("fields[comment]", comment)
+	params.Set("fields[target__context]", "ticket")
+	params.Set("fields[target_id]", strconv.Itoa(ticketID))
+
+	var ticket CreateCommentResponse
+	fmt.Println("CREATING COMMENTS")
+	err := c.performRequest(http.MethodPost, "records/comment/create.json", params, nil, &ticket)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create ticket comment: %v", err)
+	}
+
+	return nil
 }
 
 // SetCustomTicketFields updates the custom fields for the given ticket.
