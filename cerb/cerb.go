@@ -305,10 +305,13 @@ type Bucket struct {
 
 	Updated int `json:"updated_at"`
 	Default int `json:"is_default"`
+
+	GroupID   int    `json:"group_id"`
+	GroupName string `json:"group_name"`
 }
 
-// ListGroups searches for all groups
-func (c Cerberus) ListGroups() (*[]Group, error) {
+// FindAllGroups searches for all groups
+func (c Cerberus) FindAllGroups() (*[]Group, error) {
 	limit := 250 // If you need pagination imitate ListOpenTickets
 	params := url.Values{}
 	params.Set("q", "")
@@ -328,12 +331,34 @@ func (c Cerberus) ListGroups() (*[]Group, error) {
 	return &r.Results, nil
 }
 
-// FindBuckets will search Cerb for buckets within the given group
-func (c Cerberus) FindBuckets(groupID int) (*[]Bucket, error) {
+// FindAllBuckets will search Cerb for buckets
+func (c Cerberus) FindAllBuckets() (*[]Bucket, error) {
+	limit := 250 // If you need pagination imitate ListOpenTickets
+	params := url.Values{}
+	params.Set("limit", strconv.Itoa(limit))
+	params.Set("expand", "group_")
+
+	var r SearchBucketsResponse
+	err := c.performRequest(http.MethodGet, "records/bucket/search.json", params, nil, &r)
+
+	if err != nil {
+		return nil, fmt.Errorf("ListGroups failed to search buckets: %v", err)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshall FindBuckets search results: %v", err)
+	}
+
+	return &r.Results, nil
+}
+
+// FindBucketsInGroup will search Cerb for buckets within the given group
+func (c Cerberus) FindBucketsInGroup(groupID int) (*[]Bucket, error) {
 	limit := 250 // If you need pagination imitate ListOpenTickets
 	params := url.Values{}
 	params.Set("q", "group.id:["+strconv.Itoa(groupID)+"]")
 	params.Set("limit", strconv.Itoa(limit))
+	params.Set("expand", "group_")
 
 	var r SearchBucketsResponse
 	err := c.performRequest(http.MethodGet, "records/bucket/search.json", params, nil, &r)
@@ -351,17 +376,21 @@ func (c Cerberus) FindBuckets(groupID int) (*[]Bucket, error) {
 
 // FindAllGroupsAndBuckets searches Cerb for all Groups and the Buckets within them.
 func (c Cerberus) FindAllGroupsAndBuckets() (*[]Group, error) {
-	groups, err := c.ListGroups()
+	groups, err := c.FindAllGroups()
 
 	if err != nil {
 		return nil, fmt.Errorf("error listing groups: %v", err)
 	}
 
 	for i, group := range *groups {
-		buckets, err := c.FindBuckets(group.ID)
+		buckets, err := c.FindBucketsInGroup(group.ID)
 
 		if err != nil {
 			return nil, fmt.Errorf("AllBucketsByGroup failed to find buckets in group %d: %v", group.ID, err)
+		}
+
+		for j := range *buckets {
+			(*buckets)[j].GroupName = group.Name
 		}
 
 		(*groups)[i].Buckets = *buckets
