@@ -9,8 +9,9 @@ import (
 
 // CerberusCreds contains the keys needed to connect to the Cerberus API. @see https://cerb.ai/docs/api/authentication/
 type CerberusCreds struct {
-	Key    string `json:"access-key"`
-	Secret string `json:"access-secret"`
+	Key            string `json:"access-key"`
+	Secret         string `json:"access-secret"`
+	RestAPIBaseURL string `json:"restAPIBaseURL"`
 }
 
 // Cerberus handles all the interaction with the Cerb API.
@@ -21,11 +22,10 @@ type Cerberus struct {
 }
 
 // NewCerberus create a new Cerberus
-func NewCerberus(creds CerberusCreds, client http.Client, baseURL string) Cerberus {
+func NewCerberus(creds CerberusCreds, client http.Client) Cerberus {
 	c := Cerberus{
-		creds:          creds,
-		client:         client,
-		restAPIBaseURL: baseURL,
+		creds:  creds,
+		client: client,
 	}
 	return c
 }

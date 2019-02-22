@@ -22,7 +22,7 @@ func (c Cerberus) performRequest(method string, endpoint string, params url.Valu
 	location, _ := time.LoadLocation("GMT")
 	t := time.Now().In(location)
 	date := t.Format(time.RFC1123)
-	req, err := http.NewRequest(method, c.restAPIBaseURL+endpoint, strings.NewReader(form.Encode()))
+	req, err := http.NewRequest(method, c.creds.RestAPIBaseURL+endpoint, strings.NewReader(form.Encode()))
 
 	if len(params) > 0 {
 		q := req.URL.Query()
