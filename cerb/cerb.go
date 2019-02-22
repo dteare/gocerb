@@ -16,9 +16,8 @@ type CerberusCreds struct {
 
 // Cerberus handles all the interaction with the Cerb API.
 type Cerberus struct {
-	creds          CerberusCreds
-	client         http.Client
-	restAPIBaseURL string
+	creds  CerberusCreds
+	client http.Client
 }
 
 // NewCerberus create a new Cerberus
