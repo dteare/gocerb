@@ -1,4 +1,5 @@
 {
     "access-key": "XXX",
-    "access-secret": "YYY"
+    "access-secret": "YYY",
+    "restAPIBaseURL": "https://ZZZ.cerb.me/rest/"
 }

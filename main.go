@@ -25,11 +25,11 @@ func main() {
 
 	if err != nil {
 		fmt.Printf("Failed to load cerb creds: %v\n", err)
-		fmt.Printf("\nSETUP Instructions: Copy sample-creds.json to ~/.config/cerb/creds.json and edit to use your api keys or pass in the -cerb-creds parameter to speficy where to find it.")
+		fmt.Printf("\nSETUP Instructions: Copy sample-creds.json to ~/.config/cerb/creds.json and edit to use your api keys or pass in the -cerb-creds parameter to specify where to find it.")
 		return
 	}
 
-	c := cerb.NewCerberus(*creds, *client, "https://agilebits.cerb.me/rest/")
+	c := cerb.NewCerberus(*creds, *client)
 	testCreateTicket(c)
 	// testFindTicketsByEmail(c)
 	// testListOpenTickets(c)
