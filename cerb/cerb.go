@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // CerberusCreds contains the keys needed to connect to the Cerberus API. @see https://cerb.ai/docs/api/authentication/
@@ -82,10 +83,11 @@ type CustomerQuestion struct {
 	BucketID int
 	GroupID  int
 
-	To      string
-	From    string
-	Subject string
-	Content string
+	To           string
+	From         string
+	Participants []string
+	Subject      string
+	Content      string
 
 	CustomFields []CustomField
 	Notes        string
@@ -136,12 +138,13 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 	if status == "" {
 		status = "o"
 	}
+	participants := strings.Join(q.Participants, ", ")
 	form := url.Values{}
 	form.Set("fields[group_id]", strconv.Itoa(q.GroupID))
 	form.Set("fields[bucket_id]", strconv.Itoa(q.BucketID))
 	form.Set("fields[status]", status)
 	form.Set("fields[subject]", q.Subject)
-	form.Set("fields[participants]", q.To)
+	form.Set("fields[participants]", participants)
 
 	var ticket CreateTicketResponse
 	err := c.performRequest(http.MethodPost, "records/ticket/create.json", nil, form, &ticket)

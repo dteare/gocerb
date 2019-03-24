@@ -38,13 +38,14 @@ func main() {
 
 func testCreateTicket(c cerb.Cerberus) {
 	q := cerb.CustomerQuestion{
-		BucketID: 1049,
-		GroupID:  900,
-		Content:  "Hello there! ❤️",
-		From:     "dave+gocerb@1password.com",
-		Notes:    "Some exciting notes that stand out in a stunning yellow. 🎨",
-		Subject:  "GoCerb! 🤘🏼",
-		To:       "support@1password.com",
+		BucketID:     1049,
+		GroupID:      900,
+		Content:      "Hello there! ❤️",
+		From:         "dave+gocerb@1password.com",
+		Notes:        "Some exciting notes that stand out in a stunning yellow. 🎨",
+		Subject:      "GoCerb! 🤘🏼",
+		To:           "support@1password.com",
+		Participants: []string{"customer@example.com"},
 		CustomFields: []cerb.CustomField{
 			cerb.CustomField{
 				ID:    37, // Found using Search > Custom Fields in your Cerb workspace
