@@ -141,7 +141,7 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 	form.Set("fields[bucket_id]", strconv.Itoa(q.BucketID))
 	form.Set("fields[status]", status)
 	form.Set("fields[subject]", q.Subject)
-	form.Set("fields[participants]", "customer@example.com")
+	form.Set("fields[participants]", q.To)
 
 	var ticket CreateTicketResponse
 	err := c.performRequest(http.MethodPost, "records/ticket/create.json", nil, form, &ticket)
