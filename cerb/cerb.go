@@ -242,7 +242,7 @@ func (c Cerberus) SetCustomTicketFields(ticketID int, customFields []CustomField
 
 // FindTicketsByEmail finds all tickets for the given email address.
 // Cerb's API is paginated but we do not implement that, so this only returns
-// the first ten results.
+// the first 250 results.
 func (c Cerberus) FindTicketsByEmail(email string) (*[]CerberusTicket, error) {
 	limit := 250 // Maximum of 250 enforced by server
 	params := url.Values{}
