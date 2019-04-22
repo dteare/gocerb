@@ -41,6 +41,8 @@ type CerberusTicket struct {
 	Subject     string `json:"subject"`
 	Status      string `json:"status"`
 	URL         string `json:"url"`
+	Created     int    `json:"created"`
+	ClosedAt    int    `json:"closed_at"`
 }
 
 // CerberusTicketSearchResults is the raw structure returned by the Cerberus search API when looking for tickets. Most often you want to call a function that hides all these details and work with a []CerberusTicket instead.
@@ -172,10 +174,10 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 	c.SetCustomTicketFields(ticket.ID, q.CustomFields)
 
 	if q.Notes != "" {
-		err = c.CreateComment(ticket.ID, q.Notes)
+		err = c.CreateNote(message.ID, q.Notes)
 
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create comment on ticket %d: %v", ticket.ID, err)
+			return nil, fmt.Errorf("Failed to create sticky note on message %d: %v", message.ID, err)
 		}
 	}
 
@@ -186,17 +188,35 @@ func (c Cerberus) CreateMessage(q CustomerQuestion) (*CreateMessageResponse, err
 func (c Cerberus) CreateComment(ticketID int, comment string) error {
 	params := url.Values{}
 	params.Set("fields[author__context]", "ticket")
-	params.Set("fields[author_id]", strconv.Itoa(17))
+	params.Set("fields[author_id]", strconv.Itoa(ticketID))
 	params.Set("fields[comment]", comment)
 	params.Set("fields[target__context]", "ticket")
 	params.Set("fields[target_id]", strconv.Itoa(ticketID))
 
 	var ticket CreateCommentResponse
-	fmt.Println("CREATING COMMENTS")
 	err := c.performRequest(http.MethodPost, "records/comment/create.json", params, nil, &ticket)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create ticket comment: %v", err)
+	}
+
+	return nil
+}
+
+// CreateNote adds a sticky note to an existing message
+func (c Cerberus) CreateNote(messageID int, note string) error {
+	params := url.Values{}
+	params.Set("fields[author__context]", "message")
+	params.Set("fields[author_id]", strconv.Itoa(messageID))
+	params.Set("fields[comment]", note)
+	params.Set("fields[target__context]", "message")
+	params.Set("fields[target_id]", strconv.Itoa(messageID))
+
+	var ticket CreateCommentResponse
+	err := c.performRequest(http.MethodPost, "records/comment/create.json", params, nil, &ticket)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create ticket sticky note: %v", err)
 	}
 
 	return nil
@@ -220,10 +240,14 @@ func (c Cerberus) SetCustomTicketFields(ticketID int, customFields []CustomField
 	return nil
 }
 
-// FindTicketsByEmail finds all open tickets for the given email address.
+// FindTicketsByEmail finds all tickets for the given email address.
+// Cerb's API is paginated but we do not implement that, so this only returns
+// the first 250 results.
 func (c Cerberus) FindTicketsByEmail(email string) (*[]CerberusTicket, error) {
+	limit := 250 // Maximum of 250 enforced by server
 	params := url.Values{}
-	params.Set("q", "status:[o] messages.first:(sender:(email:"+email+"))")
+	params.Set("q", "messages.first:(sender:(email:"+email+"))")
+	params.Set("limit", strconv.Itoa(limit))
 
 	var r CerberusTicketSearchResults
 	err := c.performRequest(http.MethodGet, "records/ticket/search.json", params, nil, &r)
