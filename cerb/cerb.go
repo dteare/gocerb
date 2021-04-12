@@ -37,7 +37,7 @@ type CerberusTicket struct {
 	GroupID     int    `json:"group_id"`
 	ID          int    `json:"id"`
 	Mask        string `json:"mask"`
-	NumMessages string `json:"num_messages"`
+	NumMessages int    `json:"num_messages"`
 	Subject     string `json:"subject"`
 	Status      string `json:"status"`
 	URL         string `json:"url"`
